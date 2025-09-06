@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Students - Smart Attendance System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">Manage Students</h1>
+                <div>
+                    <a href="{{ url_for('principal.enroll_student') }}" class="btn btn-primary">
+                        <i class="fas fa-user-plus"></i> Enroll New Student
+                    </a>
+                    <button class="btn btn-success" onclick="exportStudents()">
+                        <i class="fas fa-download"></i> Export
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="input-group">
+                <input type="text" class="form-control" id="searchInput" placeholder="Search students...">
+                <div class="input-group-append">
+                    <button class="btn btn-outline-secondary" type="button" onclick="searchStudents()">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <select class="form-control" id="classFilter" onchange="filterByClass()">
+                <option value="">All Classes</option>
+                {% for class_info in classes %}
+                <option value="{{ class_info.id }}">{{ class_info.class_name }} - {{ class_info.section }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <button class="btn btn-info btn-block" onclick="bulkGenerateQRCodes()">
+                <i class="fas fa-qrcode"></i> Generate QR Codes
+            </button>
+        </div>
+    </div>
+
+    <!-- Students Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Students List</h6>
+                </div>
+                <div class="card-body">
+                    {% if students %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered" id="studentsTable">
+                            <thead>
+                                <tr>
+                                    <th>Student ID</th>
+                                    <th>Name</th>
+                                    <th>Class</th>
+                                    <th>Roll No</th>
+                                    <th>Father's Name</th>
+                                    <th>Phone</th>
+                                    <th>Enrollment Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for student in students %}
+                                <tr data-student-id="{{ student.student_id }}">
+                                    <td>{{ student.student_id }}</td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            {% if student.photo_filename %}
+                                            <img src="{{ url_for('static', filename='images/student_photos/' + student.photo_filename) }}" 
+                                                 class="rounded-circle me-2" width="30" height="30" alt="Student Photo">
+                                            {% else %}
+                                            <div class="bg-secondary rounded-circle me-2 d-flex align-items-center justify-content-center" 
+                                                 style="width: 30px; height: 30px;">
+                                                <i class="fas fa-user text-white"></i>
+                                            </div>
+                                            {% endif %}
+                                            {{ student.full_name }}
+                                        </div>
+                                    </td>
+                                    <td>{{ student.class_name }} - {{ student.section }}</td>
+                                    <td>{{ student.roll_number }}</td>
+                                    <td>{{ student.father_name or '-' }}</td>
+                                    <td>{{ student.phone or '-' }}</td>
+                                    <td>{{ student.enrollment_date.strftime('%d/%m/%Y') if student.enrollment_date else '-' }}</td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button class="btn btn-sm btn-info" onclick="viewStudent('{{ student.student_id }}')" 
+                                                    data-bs-toggle="tooltip" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-warning" onclick="editStudent('{{ student.student_id }}')" 
+                                                    data-bs-toggle="tooltip" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-success" onclick="generateQRCode('{{ student.student_id }}')" 
+                                                    data-bs-toggle="tooltip" title="Generate QR Code">
+                                                <i class="fas fa-qrcode"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-danger" onclick="deleteStudent('{{ student.student_id }}')" 
+                                                    data-bs-toggle="tooltip" title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No students found</h5>
+                        <p class="text-muted">Start by enrolling your first student</p>
+                        <a href="{{ url_for('principal.enroll_student') }}" class="btn btn-primary">
+                            <i class="fas fa-user-plus"></i> Enroll Student
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Student Details Modal -->
+<div class="modal fade" id="studentDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Student Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="studentDetailsContent">
+                <!-- Student details will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="editStudentFromModal()">Edit Student</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- QR Code Modal -->
+<div class="modal fade" id="qrCodeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Student QR Code</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center" id="qrCodeContent">
+                <!-- QR code will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="printQRCode()">
+                    <i class="fas fa-print"></i> Print
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentStudentId = null;
+
+// Search functionality
+function searchStudents() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const rows = document.querySelectorAll('#studentsTable tbody tr');
+    
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(searchTerm) ? '' : 'none';
+    });
+}
+
+// Filter by class
+function filterByClass() {
+    const selectedClass = document.getElementById('classFilter').value;
+    const rows = document.querySelectorAll('#studentsTable tbody tr');
+    
+    rows.forEach(row => {
+        if (!selectedClass) {
+            row.style.display = '';
+        } else {
+            const classCell = row.cells[2].textContent;
+            row.style.display = classCell.includes(selectedClass) ? '' : 'none';
+        }
+    });
+}
+
+// View student details
+function viewStudent(studentId) {
+    currentStudentId = studentId;
+    
+    fetch(`/api/students/${studentId}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const student = data.student;
+            document.getElementById('studentDetailsContent').innerHTML = `
+                <div class="row">
+                    <div class="col-md-4 text-center">
+                        ${student.photo_filename ? 
+                            `<img src="/static/images/student_photos/${student.photo_filename}" class="img-fluid rounded" alt="Student Photo">` :
+                            `<div class="bg-secondary rounded d-flex align-items-center justify-content-center" style="height: 200px;">
+                                <i class="fas fa-user fa-3x text-white"></i>
+                            </div>`
+                        }
+                    </div>
+                    <div class="col-md-8">
+                        <table class="table table-borderless">
+                            <tr><td><strong>Student ID:</strong></td><td>${student.student_id}</td></tr>
+                            <tr><td><strong>Name:</strong></td><td>${student.full_name}</td></tr>
+                            <tr><td><strong>Class:</strong></td><td>${student.class_name} - ${student.section}</td></tr>
+                            <tr><td><strong>Roll Number:</strong></td><td>${student.roll_number}</td></tr>
+                            <tr><td><strong>Father's Name:</strong></td><td>${student.father_name || '-'}</td></tr>
+                            <tr><td><strong>Mother's Name:</strong></td><td>${student.mother_name || '-'}</td></tr>
+                            <tr><td><strong>Date of Birth:</strong></td><td>${student.date_of_birth || '-'}</td></tr>
+                            <tr><td><strong>Phone:</strong></td><td>${student.phone || '-'}</td></tr>
+                            <tr><td><strong>Address:</strong></td><td>${student.address || '-'}</td></tr>
+                            <tr><td><strong>Enrollment Date:</strong></td><td>${student.enrollment_date || '-'}</td></tr>
+                        </table>
+                    </div>
+                </div>
+            `;
+            
+            const modal = new bootstrap.Modal(document.getElementById('studentDetailsModal'));
+            modal.show();
+        } else {
+            showNotification(data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching student details:', error);
+        showNotification('Error fetching student details', 'error');
+    });
+}
+
+// Edit student
+function editStudent(studentId) {
+    window.location.href = `/principal/edit-student/${studentId}`;
+}
+
+// Generate QR code
+function generateQRCode(studentId) {
+    fetch(`/api/qr-codes/generate`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            student_id: studentId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('qrCodeContent').innerHTML = `
+                <div class="mb-3">
+                    <img src="/static/images/qr_codes/${data.filename}" class="img-fluid" alt="QR Code">
+                </div>
+                <p class="text-muted">Student ID: ${studentId}</p>
+            `;
+            
+            const modal = new bootstrap.Modal(document.getElementById('qrCodeModal'));
+            modal.show();
+        } else {
+            showNotification(data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error generating QR code:', error);
+        showNotification('Error generating QR code', 'error');
+    });
+}
+
+// Bulk generate QR codes
+function bulkGenerateQRCodes() {
+    const selectedClass = document.getElementById('classFilter').value;
+    if (!selectedClass) {
+        showNotification('Please select a class first', 'warning');
+        return;
+    }
+    
+    if (confirm('Generate QR codes for all students in the selected class?')) {
+        generateQRCodes(selectedClass);
+    }
+}
+
+// Export students
+function exportStudents() {
+    const selectedClass = document.getElementById('classFilter').value;
+    let url = '/api/export/students';
+    if (selectedClass) {
+        url += `?class_id=${selectedClass}`;
+    }
+    window.open(url, '_blank');
+}
+
+// Print QR code
+function printQRCode() {
+    window.print();
+}
+
+// Initialize search on input
+document.getElementById('searchInput').addEventListener('input', searchStudents);
+
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function(tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock %}

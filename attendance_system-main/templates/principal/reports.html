@@ -1,0 +1,486 @@
+{% extends "base.html" %}
+
+{% block title %}Reports - Smart Attendance System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">Attendance Reports</h1>
+                <div>
+                    <button class="btn btn-success" onclick="exportAllReports()">
+                        <i class="fas fa-download"></i> Export All
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Filters -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Report Filters</h6>
+                </div>
+                <div class="card-body">
+                    <form id="reportFilters">
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label for="class_id" class="form-label">Class</label>
+                                <select class="form-control" id="class_id" name="class_id">
+                                    <option value="">All Classes</option>
+                                    {% for class_info in classes %}
+                                    <option value="{{ class_info.id }}">{{ class_info.class_name }} - {{ class_info.section }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label for="start_date" class="form-label">Start Date</label>
+                                <input type="date" class="form-control" id="start_date" name="start_date">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label for="end_date" class="form-label">End Date</label>
+                                <input type="date" class="form-control" id="end_date" name="end_date">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label for="report_type" class="form-label">Report Type</label>
+                                <select class="form-control" id="report_type" name="report_type">
+                                    <option value="daily">Daily Attendance</option>
+                                    <option value="monthly">Monthly Summary</option>
+                                    <option value="student">Student-wise</option>
+                                    <option value="class">Class-wise</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <button type="button" class="btn btn-primary" onclick="generateReport()">
+                                    <i class="fas fa-chart-line"></i> Generate Report
+                                </button>
+                                <button type="button" class="btn btn-secondary" onclick="resetFilters()">
+                                    <i class="fas fa-undo"></i> Reset
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Results -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Report Results</h6>
+                    <div>
+                        <button class="btn btn-sm btn-success" onclick="exportReport()" id="exportBtn" style="display: none;">
+                            <i class="fas fa-download"></i> Export
+                        </button>
+                        <button class="btn btn-sm btn-info" onclick="printReport()" id="printBtn" style="display: none;">
+                            <i class="fas fa-print"></i> Print
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="reportContent">
+                        <div class="text-center py-5">
+                            <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No report generated yet</h5>
+                            <p class="text-muted">Select filters and click "Generate Report" to view attendance data</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Reports -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Quick Reports</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <button class="btn btn-outline-primary btn-block" onclick="generateQuickReport('today')">
+                                <i class="fas fa-calendar-day"></i> Today's Attendance
+                            </button>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <button class="btn btn-outline-success btn-block" onclick="generateQuickReport('week')">
+                                <i class="fas fa-calendar-week"></i> This Week
+                            </button>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <button class="btn btn-outline-info btn-block" onclick="generateQuickReport('month')">
+                                <i class="fas fa-calendar-alt"></i> This Month
+                            </button>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <button class="btn btn-outline-warning btn-block" onclick="generateQuickReport('year')">
+                                <i class="fas fa-calendar"></i> This Year
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentReportData = null;
+
+// Set default dates
+document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    
+    document.getElementById('start_date').value = firstDay.toISOString().split('T')[0];
+    document.getElementById('end_date').value = today.toISOString().split('T')[0];
+});
+
+// Generate report
+function generateReport() {
+    const formData = new FormData(document.getElementById('reportFilters'));
+    const filters = Object.fromEntries(formData);
+    
+    if (!filters.start_date || !filters.end_date) {
+        showNotification('Please select start and end dates', 'warning');
+        return;
+    }
+    
+    const reportContent = document.getElementById('reportContent');
+    reportContent.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary mb-3"></div>
+            <p>Generating report...</p>
+        </div>
+    `;
+    
+    fetch('/principal/reports/attendance', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(filters)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            currentReportData = data;
+            displayReport(data);
+            document.getElementById('exportBtn').style.display = 'inline-block';
+            document.getElementById('printBtn').style.display = 'inline-block';
+        } else {
+            showNotification(data.error, 'error');
+            reportContent.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                    <h5 class="text-muted">Error generating report</h5>
+                    <p class="text-muted">${data.error}</p>
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        console.error('Error generating report:', error);
+        showNotification('Error generating report', 'error');
+    });
+}
+
+// Display report
+function displayReport(data) {
+    const reportContent = document.getElementById('reportContent');
+    
+    if (data.report_type === 'daily') {
+        displayDailyReport(data);
+    } else if (data.report_type === 'monthly') {
+        displayMonthlyReport(data);
+    } else if (data.report_type === 'student') {
+        displayStudentReport(data);
+    } else if (data.report_type === 'class') {
+        displayClassReport(data);
+    }
+}
+
+// Display daily report
+function displayDailyReport(data) {
+    const reportContent = document.getElementById('reportContent');
+    
+    let html = `
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5>Daily Attendance Report</h5>
+            <span class="badge badge-primary">${data.start_date} to ${data.end_date}</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Class</th>
+                        <th>Total Students</th>
+                        <th>Present</th>
+                        <th>Absent</th>
+                        <th>Attendance %</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    data.daily_data.forEach(record => {
+        const attendancePercent = record.total_students > 0 ? 
+            ((record.present / record.total_students) * 100).toFixed(1) : 0;
+        
+        html += `
+            <tr>
+                <td>${record.date}</td>
+                <td>${record.class_name} - ${record.section}</td>
+                <td>${record.total_students}</td>
+                <td>${record.present}</td>
+                <td>${record.absent}</td>
+                <td>${attendancePercent}%</td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    reportContent.innerHTML = html;
+}
+
+// Display monthly report
+function displayMonthlyReport(data) {
+    const reportContent = document.getElementById('reportContent');
+    
+    let html = `
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5>Monthly Attendance Summary</h5>
+            <span class="badge badge-primary">${data.start_date} to ${data.end_date}</span>
+        </div>
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card bg-primary text-white">
+                    <div class="card-body">
+                        <h5>Total Days</h5>
+                        <h3>${data.total_days}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body">
+                        <h5>Average Attendance</h5>
+                        <h3>${data.average_attendance.toFixed(1)}%</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-info text-white">
+                    <div class="card-body">
+                        <h5>Best Day</h5>
+                        <h3>${data.best_day}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-warning text-white">
+                    <div class="card-body">
+                        <h5>Worst Day</h5>
+                        <h3>${data.worst_day}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    reportContent.innerHTML = html;
+}
+
+// Display student report
+function displayStudentReport(data) {
+    const reportContent = document.getElementById('reportContent');
+    
+    let html = `
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5>Student-wise Attendance Report</h5>
+            <span class="badge badge-primary">${data.start_date} to ${data.end_date}</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Student ID</th>
+                        <th>Name</th>
+                        <th>Class</th>
+                        <th>Total Days</th>
+                        <th>Present Days</th>
+                        <th>Absent Days</th>
+                        <th>Attendance %</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    data.student_data.forEach(student => {
+        const attendancePercent = student.total_days > 0 ? 
+            ((student.present_days / student.total_days) * 100).toFixed(1) : 0;
+        
+        html += `
+            <tr>
+                <td>${student.student_id}</td>
+                <td>${student.full_name}</td>
+                <td>${student.class_name} - ${student.section}</td>
+                <td>${student.total_days}</td>
+                <td>${student.present_days}</td>
+                <td>${student.absent_days}</td>
+                <td>${attendancePercent}%</td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    reportContent.innerHTML = html;
+}
+
+// Display class report
+function displayClassReport(data) {
+    const reportContent = document.getElementById('reportContent');
+    
+    let html = `
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5>Class-wise Attendance Report</h5>
+            <span class="badge badge-primary">${data.start_date} to ${data.end_date}</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Class</th>
+                        <th>Total Students</th>
+                        <th>Average Attendance</th>
+                        <th>Best Student</th>
+                        <th>Worst Student</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    data.class_data.forEach(classInfo => {
+        html += `
+            <tr>
+                <td>${classInfo.class_name} - ${classInfo.section}</td>
+                <td>${classInfo.total_students}</td>
+                <td>${classInfo.average_attendance.toFixed(1)}%</td>
+                <td>${classInfo.best_student}</td>
+                <td>${classInfo.worst_student}</td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    reportContent.innerHTML = html;
+}
+
+// Generate quick report
+function generateQuickReport(period) {
+    const today = new Date();
+    let startDate, endDate;
+    
+    switch (period) {
+        case 'today':
+            startDate = endDate = today.toISOString().split('T')[0];
+            break;
+        case 'week':
+            const weekStart = new Date(today);
+            weekStart.setDate(today.getDate() - today.getDay());
+            startDate = weekStart.toISOString().split('T')[0];
+            endDate = today.toISOString().split('T')[0];
+            break;
+        case 'month':
+            const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+            startDate = monthStart.toISOString().split('T')[0];
+            endDate = today.toISOString().split('T')[0];
+            break;
+        case 'year':
+            const yearStart = new Date(today.getFullYear(), 0, 1);
+            startDate = yearStart.toISOString().split('T')[0];
+            endDate = today.toISOString().split('T')[0];
+            break;
+    }
+    
+    document.getElementById('start_date').value = startDate;
+    document.getElementById('end_date').value = endDate;
+    
+    generateReport();
+}
+
+// Export report
+function exportReport() {
+    if (!currentReportData) {
+        showNotification('No report data to export', 'warning');
+        return;
+    }
+    
+    const filters = Object.fromEntries(new FormData(document.getElementById('reportFilters')));
+    const params = new URLSearchParams(filters);
+    
+    window.open(`/api/export/attendance?${params.toString()}`, '_blank');
+}
+
+// Export all reports
+function exportAllReports() {
+    showNotification('Exporting all reports...', 'info');
+    window.open('/api/export/all-reports', '_blank');
+}
+
+// Print report
+function printReport() {
+    window.print();
+}
+
+// Reset filters
+function resetFilters() {
+    document.getElementById('reportFilters').reset();
+    
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    
+    document.getElementById('start_date').value = firstDay.toISOString().split('T')[0];
+    document.getElementById('end_date').value = today.toISOString().split('T')[0];
+    
+    document.getElementById('reportContent').innerHTML = `
+        <div class="text-center py-5">
+            <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No report generated yet</h5>
+            <p class="text-muted">Select filters and click "Generate Report" to view attendance data</p>
+        </div>
+    `;
+    
+    document.getElementById('exportBtn').style.display = 'none';
+    document.getElementById('printBtn').style.display = 'none';
+}
+</script>
+{% endblock %}

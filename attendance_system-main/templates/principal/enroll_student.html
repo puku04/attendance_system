@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+
+{% block title %}Enroll Student - Smart Attendance System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">Enroll New Student</h1>
+                <a href="{{ url_for('principal.manage_students') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Students
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Student Information</h6>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data" id="enrollForm">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="student_id" class="form-label">Student ID *</label>
+                                <input type="text" class="form-control" id="student_id" name="student_id" required>
+                                <div class="form-text">Unique identifier for the student</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="roll_number" class="form-label">Roll Number *</label>
+                                <input type="text" class="form-control" id="roll_number" name="roll_number" required>
+                                <div class="form-text">Roll number in the class</div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="full_name" class="form-label">Full Name *</label>
+                                <input type="text" class="form-control" id="full_name" name="full_name" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="class_id" class="form-label">Class *</label>
+                                <select class="form-control" id="class_id" name="class_id" required>
+                                    <option value="">Select Class</option>
+                                    {% for class_info in classes %}
+                                    <option value="{{ class_info.id }}">{{ class_info.class_name }} - {{ class_info.section }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="father_name" class="form-label">Father's Name</label>
+                                <input type="text" class="form-control" id="father_name" name="father_name">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="mother_name" class="form-label">Mother's Name</label>
+                                <input type="text" class="form-control" id="mother_name" name="mother_name">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="date_of_birth" class="form-label">Date of Birth</label>
+                                <input type="date" class="form-control" id="date_of_birth" name="date_of_birth">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="phone" class="form-label">Phone Number</label>
+                                <input type="tel" class="form-control" id="phone" name="phone">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="enrollment_date" class="form-label">Enrollment Date</label>
+                                <input type="date" class="form-control" id="enrollment_date" name="enrollment_date" 
+                                       value="{{ moment().format('YYYY-MM-DD') }}">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check mt-4">
+                                    <input class="form-check-input" type="checkbox" id="consent_given" name="consent_given">
+                                    <label class="form-check-label" for="consent_given">
+                                        Parent/Guardian Consent Given
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="address" class="form-label">Address</label>
+                            <textarea class="form-control" id="address" name="address" rows="3"></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="photo" class="form-label">Student Photo</label>
+                            <input type="file" class="form-control" id="photo" name="photo" accept="image/*">
+                            <div class="form-text">Upload a clear photo of the student for face recognition</div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <button type="button" class="btn btn-secondary" onclick="resetForm()">
+                                <i class="fas fa-undo"></i> Reset
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Enroll Student
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Photo Preview -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Photo Preview</h6>
+                </div>
+                <div class="card-body text-center">
+                    <div id="photoPreview" class="mb-3">
+                        <div class="bg-light border rounded d-flex align-items-center justify-content-center" 
+                             style="height: 200px;">
+                            <div class="text-muted">
+                                <i class="fas fa-camera fa-3x mb-2"></i>
+                                <p>No photo selected</p>
+                            </div>
+                        </div>
+                    </div>
+                    <small class="text-muted">
+                        A clear, front-facing photo is required for face recognition
+                    </small>
+                </div>
+            </div>
+
+            <!-- Instructions -->
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Enrollment Instructions</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Fill all required fields marked with *
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Upload a clear photo for face recognition
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Ensure Student ID is unique
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Roll number should be unique within class
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            QR code will be generated automatically
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Photo preview functionality
+document.getElementById('photo').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('photoPreview').innerHTML = `
+                <img src="${e.target.result}" class="img-fluid rounded" alt="Photo Preview" style="max-height: 200px;">
+            `;
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// Form validation
+document.getElementById('enrollForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Validate required fields
+    const requiredFields = ['student_id', 'roll_number', 'full_name', 'class_id'];
+    let isValid = true;
+    
+    requiredFields.forEach(field => {
+        const input = document.getElementById(field);
+        if (!input.value.trim()) {
+            input.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            input.classList.remove('is-invalid');
+        }
+    });
+    
+    if (!isValid) {
+        showNotification('Please fill all required fields', 'error');
+        return;
+    }
+    
+    // Check if student ID already exists
+    checkStudentIdExists(document.getElementById('student_id').value)
+        .then(exists => {
+            if (exists) {
+                showNotification('Student ID already exists', 'error');
+                document.getElementById('student_id').classList.add('is-invalid');
+                return;
+            }
+            
+            // Submit form
+            submitForm();
+        })
+        .catch(error => {
+            console.error('Error checking student ID:', error);
+            submitForm(); // Proceed anyway
+        });
+});
+
+// Check if student ID exists
+function checkStudentIdExists(studentId) {
+    return fetch(`/api/students/${studentId}`)
+        .then(response => response.json())
+        .then(data => data.success);
+}
+
+// Submit form
+function submitForm() {
+    const form = document.getElementById('enrollForm');
+    const formData = new FormData(form);
+    
+    const submitBtn = form.querySelector('button[type="submit"]');
+    showLoading(submitBtn);
+    
+    fetch(form.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.text();
+        }
+        throw new Error('Network response was not ok');
+    })
+    .then(data => {
+        hideLoading(submitBtn);
+        showNotification('Student enrolled successfully!', 'success');
+        
+        // Reset form
+        resetForm();
+        
+        // Redirect to students list after a delay
+        setTimeout(() => {
+            window.location.href = "{{ url_for('principal.manage_students') }}";
+        }, 2000);
+    })
+    .catch(error => {
+        hideLoading(submitBtn);
+        console.error('Error enrolling student:', error);
+        showNotification('Error enrolling student. Please try again.', 'error');
+    });
+}
+
+// Reset form
+function resetForm() {
+    document.getElementById('enrollForm').reset();
+    document.getElementById('photoPreview').innerHTML = `
+        <div class="bg-light border rounded d-flex align-items-center justify-content-center" 
+             style="height: 200px;">
+            <div class="text-muted">
+                <i class="fas fa-camera fa-3x mb-2"></i>
+                <p>No photo selected</p>
+            </div>
+        </div>
+    `;
+    
+    // Remove validation classes
+    document.querySelectorAll('.is-invalid').forEach(el => {
+        el.classList.remove('is-invalid');
+    });
+}
+
+// Auto-generate student ID
+document.getElementById('class_id').addEventListener('change', function() {
+    const classId = this.value;
+    if (classId && !document.getElementById('student_id').value) {
+        // Generate a simple student ID based on class
+        const classText = this.options[this.selectedIndex].text;
+        const year = new Date().getFullYear();
+        const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        const studentId = `STU${year}${randomNum}`;
+        document.getElementById('student_id').value = studentId;
+    }
+});
+
+// Set today's date as default enrollment date
+document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('enrollment_date').value = today;
+});
+</script>
+{% endblock %}

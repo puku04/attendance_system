@@ -1,0 +1,404 @@
+{% extends "base.html" %}
+
+{% block title %}Class List - {{ class_info.class_name }} {{ class_info.section }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">{{ class_info.class_name }} {{ class_info.section }} - Student List</h1>
+                <div>
+                    <a href="{{ url_for('teacher.take_attendance', class_id=class_info.id) }}" class="btn btn-primary">
+                        <i class="fas fa-camera"></i> Take Attendance
+                    </a>
+                    <a href="{{ url_for('teacher.dashboard') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Class Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total Students</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ students|length }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-users fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Present Today</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="presentToday">
+                                -</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calendar-check fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Absent Today</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="absentToday">
+                                -</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calendar-times fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Attendance %</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="attendancePercent">
+                                -</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-percentage fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="input-group">
+                <input type="text" class="form-control" id="searchInput" placeholder="Search students...">
+                <div class="input-group-append">
+                    <button class="btn btn-outline-secondary" type="button" onclick="searchStudents()">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <select class="form-control" id="statusFilter" onchange="filterByStatus()">
+                <option value="">All Students</option>
+                <option value="present">Present Today</option>
+                <option value="absent">Absent Today</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <button class="btn btn-info btn-block" onclick="exportClassList()">
+                <i class="fas fa-download"></i> Export List
+            </button>
+        </div>
+    </div>
+
+    <!-- Students Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Students List</h6>
+                </div>
+                <div class="card-body">
+                    {% if students %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered" id="studentsTable">
+                            <thead>
+                                <tr>
+                                    <th>Roll No</th>
+                                    <th>Student ID</th>
+                                    <th>Name</th>
+                                    <th>Father's Name</th>
+                                    <th>Phone</th>
+                                    <th>Today's Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for student in students %}
+                                <tr data-student-id="{{ student.student_id }}" data-roll-number="{{ student.roll_number }}">
+                                    <td>{{ student.roll_number }}</td>
+                                    <td>{{ student.student_id }}</td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            {% if student.photo_filename %}
+                                            <img src="{{ url_for('static', filename='images/student_photos/' + student.photo_filename) }}" 
+                                                 class="rounded-circle me-2" width="30" height="30" alt="Student Photo">
+                                            {% else %}
+                                            <div class="bg-secondary rounded-circle me-2 d-flex align-items-center justify-content-center" 
+                                                 style="width: 30px; height: 30px;">
+                                                <i class="fas fa-user text-white"></i>
+                                            </div>
+                                            {% endif %}
+                                            {{ student.full_name }}
+                                        </div>
+                                    </td>
+                                    <td>{{ student.father_name or '-' }}</td>
+                                    <td>{{ student.phone or '-' }}</td>
+                                    <td id="status-{{ student.student_id }}">
+                                        <span class="badge badge-secondary">Not Marked</span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button class="btn btn-sm btn-info" onclick="viewStudentDetails('{{ student.student_id }}')" 
+                                                    data-bs-toggle="tooltip" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-success" onclick="markPresent('{{ student.student_id }}')" 
+                                                    data-bs-toggle="tooltip" title="Mark Present">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-warning" onclick="markAbsent('{{ student.student_id }}')" 
+                                                    data-bs-toggle="tooltip" title="Mark Absent">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No students found</h5>
+                        <p class="text-muted">No students are enrolled in this class</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Student Details Modal -->
+<div class="modal fade" id="studentDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Student Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="studentDetailsContent">
+                <!-- Student details will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentClassId = {{ class_info.id }};
+
+// Load today's attendance status
+document.addEventListener('DOMContentLoaded', function() {
+    loadTodayAttendance();
+    
+    // Initialize search
+    document.getElementById('searchInput').addEventListener('input', searchStudents);
+    
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function(tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+
+// Load today's attendance
+function loadTodayAttendance() {
+    fetch(`/api/attendance-summary/${currentClassId}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updateAttendanceStatus(data);
+        }
+    })
+    .catch(error => {
+        console.error('Error loading attendance:', error);
+    });
+}
+
+// Update attendance status
+function updateAttendanceStatus(data) {
+    // Update statistics
+    document.getElementById('presentToday').textContent = data.total_present;
+    document.getElementById('absentToday').textContent = data.total_absent;
+    
+    const totalStudents = data.total_present + data.total_absent;
+    const attendancePercent = totalStudents > 0 ? 
+        ((data.total_present / totalStudents) * 100).toFixed(1) : 0;
+    document.getElementById('attendancePercent').textContent = attendancePercent + '%';
+    
+    // Update individual student status
+    data.present_students.forEach(student => {
+        const statusElement = document.getElementById(`status-${student.student_id}`);
+        if (statusElement) {
+            statusElement.innerHTML = '<span class="badge badge-success">Present</span>';
+        }
+    });
+    
+    data.absent_students.forEach(student => {
+        const statusElement = document.getElementById(`status-${student.student_id}`);
+        if (statusElement) {
+            statusElement.innerHTML = '<span class="badge badge-danger">Absent</span>';
+        }
+    });
+}
+
+// Search students
+function searchStudents() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const rows = document.querySelectorAll('#studentsTable tbody tr');
+    
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(searchTerm) ? '' : 'none';
+    });
+}
+
+// Filter by status
+function filterByStatus() {
+    const selectedStatus = document.getElementById('statusFilter').value;
+    const rows = document.querySelectorAll('#studentsTable tbody tr');
+    
+    rows.forEach(row => {
+        if (!selectedStatus) {
+            row.style.display = '';
+        } else {
+            const statusElement = row.querySelector('[id^="status-"]');
+            const statusText = statusElement ? statusElement.textContent.toLowerCase() : '';
+            const shouldShow = (selectedStatus === 'present' && statusText.includes('present')) ||
+                             (selectedStatus === 'absent' && statusText.includes('absent'));
+            row.style.display = shouldShow ? '' : 'none';
+        }
+    });
+}
+
+// View student details
+function viewStudentDetails(studentId) {
+    fetch(`/api/students/${studentId}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const student = data.student;
+            document.getElementById('studentDetailsContent').innerHTML = `
+                <div class="row">
+                    <div class="col-md-4 text-center">
+                        ${student.photo_filename ? 
+                            `<img src="/static/images/student_photos/${student.photo_filename}" class="img-fluid rounded" alt="Student Photo">` :
+                            `<div class="bg-secondary rounded d-flex align-items-center justify-content-center" style="height: 200px;">
+                                <i class="fas fa-user fa-3x text-white"></i>
+                            </div>`
+                        }
+                    </div>
+                    <div class="col-md-8">
+                        <table class="table table-borderless">
+                            <tr><td><strong>Student ID:</strong></td><td>${student.student_id}</td></tr>
+                            <tr><td><strong>Name:</strong></td><td>${student.full_name}</td></tr>
+                            <tr><td><strong>Roll Number:</strong></td><td>${student.roll_number}</td></tr>
+                            <tr><td><strong>Father's Name:</strong></td><td>${student.father_name || '-'}</td></tr>
+                            <tr><td><strong>Mother's Name:</strong></td><td>${student.mother_name || '-'}</td></tr>
+                            <tr><td><strong>Date of Birth:</strong></td><td>${student.date_of_birth || '-'}</td></tr>
+                            <tr><td><strong>Phone:</strong></td><td>${student.phone || '-'}</td></tr>
+                            <tr><td><strong>Address:</strong></td><td>${student.address || '-'}</td></tr>
+                            <tr><td><strong>Enrollment Date:</strong></td><td>${student.enrollment_date || '-'}</td></tr>
+                        </table>
+                    </div>
+                </div>
+            `;
+            
+            const modal = new bootstrap.Modal(document.getElementById('studentDetailsModal'));
+            modal.show();
+        } else {
+            showNotification(data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching student details:', error);
+        showNotification('Error fetching student details', 'error');
+    });
+}
+
+// Mark student present
+function markPresent(studentId) {
+    if (confirm('Mark this student as present?')) {
+        markAttendance(studentId, 'present');
+    }
+}
+
+// Mark student absent
+function markAbsent(studentId) {
+    if (confirm('Mark this student as absent?')) {
+        markAttendance(studentId, 'absent');
+    }
+}
+
+// Mark attendance
+function markAttendance(studentId, status) {
+    fetch('/api/attendance', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            student_id: studentId,
+            class_id: currentClassId,
+            status: status,
+            method: 'manual'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(`Student marked as ${status}`, 'success');
+            loadTodayAttendance(); // Refresh attendance status
+        } else {
+            showNotification(data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error marking attendance:', error);
+        showNotification('Error marking attendance', 'error');
+    });
+}
+
+// Export class list
+function exportClassList() {
+    window.open(`/api/export/class-list/${currentClassId}`, '_blank');
+}
+</script>
+{% endblock %}
