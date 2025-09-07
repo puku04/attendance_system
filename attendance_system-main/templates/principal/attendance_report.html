@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Attendance Report{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="text-center">Attendance Report</h3>
+                    {% if class_info %}
+                    <h5 class="text-center">{{ class_info.class_name }} - {{ class_info.section }}</h5>
+                    <p class="text-center">{{ start_date }} to {{ end_date }}</p>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if summary %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Student ID</th>
+                                    <th>Name</th>
+                                    <th>Roll Number</th>
+                                    <th>Total Days</th>
+                                    <th>Present Days</th>
+                                    <th>Absent Days</th>
+                                    <th>Attendance %</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in summary %}
+                                <tr>
+                                    <td>{{ record.student_id }}</td>
+                                    <td>{{ record.full_name }}</td>
+                                    <td>{{ record.roll_number }}</td>
+                                    <td>{{ record.total_days }}</td>
+                                    <td>{{ record.present_days }}</td>
+                                    <td>{{ record.absent_days }}</td>
+                                    <td>
+                                        <span class="badge {% if record.attendance_percentage >= 75 %}bg-success{% elif record.attendance_percentage >= 50 %}bg-warning{% else %}bg-danger{% endif %}">
+                                            {{ record.attendance_percentage }}%
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        No attendance data found for the selected period.
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mt-3">
+                        <a href="{{ url_for('principal.reports') }}" class="btn btn-secondary">Back to Reports</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

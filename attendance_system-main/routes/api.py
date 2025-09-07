@@ -11,6 +11,7 @@ from models.user import UserModel
 from utils.face_recognition import face_manager
 from utils.qr_code import qr_manager
 from utils.ocr_processor import ocr_processor
+from utils.file_validator import file_validator
 
 # Create API blueprint
 api_bp = Blueprint('api', __name__, url_prefix='/api')
@@ -205,16 +206,25 @@ def process_face_recognition():
             return jsonify({'success': False, 'error': 'No image provided'}), 400
         
         file = request.files['image']
-        if file.filename == '':
-            return jsonify({'success': False, 'error': 'No image selected'}), 400
+        
+        # Validate file
+        is_valid, error_msg, file_info = file_validator.validate_file(
+            file, 
+            allowed_types=['image/jpeg', 'image/png', 'image/gif']
+        )
+        
+        if not is_valid:
+            return jsonify({'success': False, 'error': error_msg}), 400
         
         # Save temporary file
         import os
-        from werkzeug.utils import secure_filename
         from config import Config
         
-        filename = secure_filename(file.filename)
-        temp_path = os.path.join(Config.UPLOAD_FOLDER, 'temp', filename)
+        filename = file_validator.sanitize_filename(file.filename)
+        temp_path = file_validator.get_safe_path(
+            os.path.join(Config.UPLOAD_FOLDER, 'temp'), 
+            filename
+        )
         os.makedirs(os.path.dirname(temp_path), exist_ok=True)
         file.save(temp_path)
         
@@ -246,13 +256,24 @@ def add_student_face():
         if not student_id or not student_name:
             return jsonify({'success': False, 'error': 'Student ID and name required'}), 400
         
+        # Validate file
+        is_valid, error_msg, file_info = file_validator.validate_file(
+            file, 
+            allowed_types=['image/jpeg', 'image/png', 'image/gif']
+        )
+        
+        if not is_valid:
+            return jsonify({'success': False, 'error': error_msg}), 400
+        
         # Save temporary file
         import os
-        from werkzeug.utils import secure_filename
         from config import Config
         
-        filename = secure_filename(file.filename)
-        temp_path = os.path.join(Config.UPLOAD_FOLDER, 'temp', filename)
+        filename = file_validator.sanitize_filename(file.filename)
+        temp_path = file_validator.get_safe_path(
+            os.path.join(Config.UPLOAD_FOLDER, 'temp'), 
+            filename
+        )
         os.makedirs(os.path.dirname(temp_path), exist_ok=True)
         file.save(temp_path)
         

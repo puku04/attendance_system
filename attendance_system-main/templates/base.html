@@ -104,6 +104,9 @@
     <main class="{% if not session.user_id %}login-main{% else %}container-fluid{% endif %}">
         {% block content %}{% endblock %}
     </main>
+    
+    <!-- CSRF Token for AJAX requests -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <!-- Footer -->
     {% if session.user_id %}

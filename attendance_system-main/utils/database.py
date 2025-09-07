@@ -1,7 +1,9 @@
 import mysql.connector
 from mysql.connector import Error
 from config import Config
-import logging
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 class DatabaseManager:
     def __init__(self):
@@ -22,7 +24,7 @@ class DatabaseManager:
             if self.connection.is_connected():
                 return True
         except Error as e:
-            logging.error(f"Database connection error: {e}")
+            logger.error(f"Database connection error: {e}")
             return False
     
     def disconnect(self):
@@ -34,7 +36,9 @@ class DatabaseManager:
         """Execute a query with optional parameters"""
         try:
             if not self.connection or not self.connection.is_connected():
-                self.connect()
+                if not self.connect():
+                    logger.error("Failed to establish database connection")
+                    return None
             
             cursor = self.connection.cursor(dictionary=True)
             cursor.execute(query, params or ())
@@ -50,14 +54,33 @@ class DatabaseManager:
                 return {'affected_rows': affected_rows, 'last_id': last_id}
                 
         except Error as e:
-            logging.error(f"Query execution error: {e}")
+            logger.error(f"Query execution error: {e}")
+            # Try to reconnect and retry once
+            try:
+                if self.connect():
+                    cursor = self.connection.cursor(dictionary=True)
+                    cursor.execute(query, params or ())
+                    
+                    if query.strip().upper().startswith('SELECT'):
+                        result = cursor.fetchall()
+                        cursor.close()
+                        return result
+                    else:
+                        affected_rows = cursor.rowcount
+                        last_id = cursor.lastrowid
+                        cursor.close()
+                        return {'affected_rows': affected_rows, 'last_id': last_id}
+            except Error as retry_error:
+                logger.error(f"Retry query execution error: {retry_error}")
             return None
     
     def execute_many(self, query, params_list):
         """Execute multiple queries with parameter lists"""
         try:
             if not self.connection or not self.connection.is_connected():
-                self.connect()
+                if not self.connect():
+                    logger.error("Failed to establish database connection for bulk operation")
+                    return 0
             
             cursor = self.connection.cursor()
             cursor.executemany(query, params_list)
@@ -66,7 +89,17 @@ class DatabaseManager:
             return affected_rows
             
         except Error as e:
-            logging.error(f"Bulk query execution error: {e}")
+            logger.error(f"Bulk query execution error: {e}")
+            # Try to reconnect and retry once
+            try:
+                if self.connect():
+                    cursor = self.connection.cursor()
+                    cursor.executemany(query, params_list)
+                    affected_rows = cursor.rowcount
+                    cursor.close()
+                    return affected_rows
+            except Error as retry_error:
+                logger.error(f"Retry bulk query execution error: {retry_error}")
             return 0
 
 # Global database instance

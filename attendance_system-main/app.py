@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
+from flask_wtf.csrf import CSRFProtect
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 import os
@@ -11,6 +12,7 @@ from config import Config
 from utils.database import db
 from utils.face_recognition import face_manager
 from utils.qr_code import qr_manager
+from utils.logger import get_logger
 
 # Import blueprints
 from routes.auth import auth_bp
@@ -19,12 +21,14 @@ from routes.principal import principal_bp
 from routes.teacher import teacher_bp
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Initialize Flask app
 app = Flask(__name__)
 app.config.from_object(Config)
+
+# Initialize CSRF protection
+csrf = CSRFProtect(app)
 
 # Register blueprints
 app.register_blueprint(auth_bp)

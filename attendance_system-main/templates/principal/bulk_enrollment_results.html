@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Bulk Enrollment Results{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="text-center">Bulk Enrollment Results</h3>
+                </div>
+                <div class="card-body">
+                    {% if results %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>File Name</th>
+                                    <th>Status</th>
+                                    <th>Error</th>
+                                    <th>Extracted Data</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for result in results %}
+                                <tr>
+                                    <td>{{ result.filename }}</td>
+                                    <td>
+                                        {% if result.success %}
+                                        <span class="badge bg-success">Success</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">Failed</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ result.error or 'None' }}</td>
+                                    <td>
+                                        {% if result.data %}
+                                        <pre class="small">{{ result.data | tojson(indent=2) }}</pre>
+                                        {% else %}
+                                        No data
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        No results to display.
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mt-3">
+                        <a href="{{ url_for('principal.bulk_enrollment') }}" class="btn btn-secondary">Back to Bulk Enrollment</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -20,6 +20,7 @@ class OCRProcessor:
     
     def preprocess_image(self, image_path):
         """Preprocess image for better OCR results"""
+        image = None
         try:
             # Read image
             image = cv2.imread(image_path)
@@ -29,24 +30,41 @@ class OCRProcessor:
             # Convert to grayscale
             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
             
+            # Clear original image from memory
+            del image
+            image = None
+            
             # Apply Gaussian blur to reduce noise
             blurred = cv2.GaussianBlur(gray, (5, 5), 0)
             
+            # Clear gray image from memory
+            del gray
+            
             # Apply threshold to get binary image
             _, thresh = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            
+            # Clear blurred image from memory
+            del blurred
             
             # Morphological operations to clean up the image
             kernel = np.ones((1, 1), np.uint8)
             cleaned = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
             
+            # Clear thresh image from memory
+            del thresh
+            
             return cleaned
             
         except Exception as e:
             self.logger.error(f"Error preprocessing image: {e}")
+            # Ensure cleanup on error
+            if image is not None:
+                del image
             return None
     
     def extract_text_from_image(self, image_path, preprocess=True):
         """Extract text from image using OCR"""
+        pil_image = None
         try:
             if preprocess:
                 processed_image = self.preprocess_image(image_path)
@@ -55,6 +73,9 @@ class OCRProcessor:
                 
                 # Convert back to PIL Image for tesseract
                 pil_image = Image.fromarray(processed_image)
+                
+                # Clear processed image from memory
+                del processed_image
             else:
                 pil_image = Image.open(image_path)
             
@@ -69,6 +90,10 @@ class OCRProcessor:
         except Exception as e:
             self.logger.error(f"Error extracting text from image: {e}")
             return None, str(e)
+        finally:
+            # Ensure PIL image is cleaned up
+            if pil_image is not None:
+                pil_image.close()
     
     def extract_form_data(self, image_path):
         """Extract structured data from student enrollment form"""
