@@ -108,9 +108,12 @@ class StudentModel:
             fields = []
             values = []
             
+            # Whitelist allowed fields to prevent SQL injection
+            allowed_fields = ['full_name', 'father_name', 'mother_name', 'date_of_birth', 
+                            'address', 'phone', 'photo_filename', 'qr_code', 'consent_given']
+            
             for key, value in update_data.items():
-                if key in ['full_name', 'father_name', 'mother_name', 'date_of_birth', 
-                          'address', 'phone', 'photo_filename', 'qr_code', 'consent_given']:
+                if key in allowed_fields:
                     fields.append(f"{key} = %s")
                     values.append(value)
             

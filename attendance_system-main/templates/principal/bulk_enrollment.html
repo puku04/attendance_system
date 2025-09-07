@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Bulk Enrollment{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="text-center">Bulk Enrollment</h3>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        <div class="form-group mb-3">
+                            <label for="forms">Upload Student Forms</label>
+                            <input type="file" class="form-control" id="forms" name="forms" multiple accept="image/*" required>
+                            <small class="form-text text-muted">Select multiple form images (PNG, JPG, JPEG)</small>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <h5>Instructions:</h5>
+                            <ul>
+                                <li>Upload clear images of student enrollment forms</li>
+                                <li>Ensure forms contain student name and roll number</li>
+                                <li>Supported formats: PNG, JPG, JPEG</li>
+                                <li>OCR will extract data automatically</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Process Forms</button>
+                        </div>
+                    </form>
+                    
+                    <div class="mt-3">
+                        <a href="{{ url_for('principal.dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

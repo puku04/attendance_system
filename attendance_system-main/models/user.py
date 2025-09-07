@@ -138,8 +138,11 @@ class UserModel:
             fields = []
             values = []
             
+            # Whitelist allowed fields to prevent SQL injection
+            allowed_fields = ['full_name', 'email', 'role', 'password']
+            
             for key, value in update_data.items():
-                if key in ['full_name', 'email', 'role']:
+                if key in allowed_fields:
                     fields.append(f"{key} = %s")
                     values.append(value)
                 elif key == 'password':

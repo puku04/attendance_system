@@ -1,9 +1,14 @@
 import os
+import secrets
 from datetime import timedelta
 
 class Config:
     # Flask configuration
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'your-secret-key-here-change-in-production'
+    SECRET_KEY = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
+    
+    # Security settings
+    WTF_CSRF_ENABLED = True
+    WTF_CSRF_TIME_LIMIT = 3600  # 1 hour
     
     # MySQL Database configuration
     MYSQL_HOST = os.environ.get('MYSQL_HOST') or 'localhost'
@@ -31,5 +36,4 @@ class Config:
     PERMANENT_SESSION_LIFETIME = timedelta(hours=8)
     
     # OCR Settings
-    TESSERACT_CMD = r'C:\Program Files\Tesseract-OCR\tesseract.exe'  # Windows
-    # TESSERACT_CMD = '/usr/bin/tesseract'  # Linux/Mac
+    TESSERACT_CMD = os.environ.get('TESSERACT_CMD') or '/usr/bin/tesseract'  # Default to Linux path

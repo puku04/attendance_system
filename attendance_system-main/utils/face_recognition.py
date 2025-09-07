@@ -53,6 +53,9 @@ class FaceRecognitionManager:
             image = face_recognition.load_image_file(image_path)
             face_encodings = face_recognition.face_encodings(image, model=self.model)
             
+            # Clear image from memory
+            del image
+            
             if len(face_encodings) == 0:
                 return False, "No face detected in the image"
             
@@ -77,13 +80,15 @@ class FaceRecognitionManager:
     def recognize_faces_in_image(self, image_path):
         """Recognize all faces in a group photo"""
         try:
-            # Load the uploaded image
+            # Load the uploaded image (already in RGB format)
             image = face_recognition.load_image_file(image_path)
-            rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             
             # Find face locations and encodings
-            face_locations = face_recognition.face_locations(rgb_image, model=self.model)
-            face_encodings = face_recognition.face_encodings(rgb_image, face_locations, model=self.model)
+            face_locations = face_recognition.face_locations(image, model=self.model)
+            face_encodings = face_recognition.face_encodings(image, face_locations, model=self.model)
+            
+            # Clear image from memory
+            del image
             
             recognized_students = []
             unrecognized_faces = len(face_encodings)
